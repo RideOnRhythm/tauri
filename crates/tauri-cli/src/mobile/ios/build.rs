@@ -317,6 +317,7 @@ fn run_build(
         app_version.push_str(&build_number.to_string());
       }
 
+      /*
       let credentials = auth_credentials_from_env()?;
       let skip_signing = credentials.is_some();
 
@@ -328,11 +329,15 @@ fn run_build(
       }
 
       target.build(None, config, env, noise_level, profile, build_config)?;
+      */
 
       let mut archive_config = ArchiveConfig::new();
+      /*
       if skip_signing {
         archive_config = archive_config.skip_codesign();
       }
+      */
+      archive_config = archive_config.skip_codesign();
 
       target.archive(
         config,
@@ -343,6 +348,7 @@ fn run_build(
         archive_config,
       )?;
 
+      /*
       let out_dir = config.export_dir().join(target.arch);
 
       if target.sdk == "iphonesimulator" {
@@ -414,6 +420,7 @@ fn run_build(
           out_files.push(path);
         }
       }
+      */
 
       Ok(())
     },
