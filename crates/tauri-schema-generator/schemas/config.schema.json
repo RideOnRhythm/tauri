@@ -24,7 +24,7 @@
       "pattern": "^[^/\\:*?\"<>|]+$"
     },
     "mainBinaryName": {
-      "description": "App main binary filename. Defaults to the name of your cargo crate.",
+      "description": "Overrides app's main binary filename.\n\n By default, Tauri uses the output binary from `cargo`, by setting this, we will rename that binary in `tauri-cli`'s\n `tauri build` command, and target `tauri bundle` to it\n\n If possible, change the [`package name`] or set the [`name field`] instead,\n and if that's not enough and you're using nightly, consider using the [`different-binary-name`] feature instead\n\n Note: this config should not include the binary extension (e.g. `.exe`), we'll add that for you\n\n [`package name`]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-name-field\n [`name field`]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-name-field\n [`different-binary-name`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#different-binary-name",
       "type": [
         "string",
         "null"
@@ -1346,7 +1346,7 @@
       ]
     },
     "Capability": {
-      "description": "A grouping and boundary mechanism developers can use to isolate access to the IPC layer.\n\n It controls application windows' and webviews' fine grained access\n to the Tauri core, application, or plugin commands.\n If a webview or its window is not matching any capability then it has no access to the IPC layer at all.\n\n This can be done to create groups of windows, based on their required system access, which can reduce\n impact of frontend vulnerabilities in less privileged windows.\n Windows can be added to a capability by exact name (e.g. `main-window`) or glob patterns like `*` or `admin-*`.\n A Window can have none, one, or multiple associated capabilities.\n\n ## Example\n\n ```json\n {\n   \"identifier\": \"main-user-files-write\",\n   \"description\": \"This capability allows the `main` window on macOS and Windows access to `filesystem` write related commands and `dialog` commands to enable programatic access to files selected by the user.\",\n   \"windows\": [\n     \"main\"\n   ],\n   \"permissions\": [\n     \"core:default\",\n     \"dialog:open\",\n     {\n       \"identifier\": \"fs:allow-write-text-file\",\n       \"allow\": [{ \"path\": \"$HOME/test.txt\" }]\n     },\n   ],\n   \"platforms\": [\"macOS\",\"windows\"]\n }\n ```",
+      "description": "A grouping and boundary mechanism developers can use to isolate access to the IPC layer.\n\n It controls application windows' and webviews' fine grained access\n to the Tauri core, application, or plugin commands.\n If a webview or its window is not matching any capability then it has no access to the IPC layer at all.\n\n This can be done to create groups of windows, based on their required system access, which can reduce\n impact of frontend vulnerabilities in less privileged windows.\n Windows can be added to a capability by exact name (e.g. `main-window`) or glob patterns like `*` or `admin-*`.\n A Window can have none, one, or multiple associated capabilities.\n\n ## Example\n\n ```json\n {\n   \"identifier\": \"main-user-files-write\",\n   \"description\": \"This capability allows the `main` window on macOS and Windows access to `filesystem` write related commands and `dialog` commands to enable programmatic access to files selected by the user.\",\n   \"windows\": [\n     \"main\"\n   ],\n   \"permissions\": [\n     \"core:default\",\n     \"dialog:open\",\n     {\n       \"identifier\": \"fs:allow-write-text-file\",\n       \"allow\": [{ \"path\": \"$HOME/test.txt\" }]\n     },\n   ],\n   \"platforms\": [\"macOS\",\"windows\"]\n }\n ```",
       "type": "object",
       "required": [
         "identifier",
@@ -1358,7 +1358,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Description of what the capability is intended to allow on associated windows.\n\n It should contain a description of what the grouped permissions should allow.\n\n ## Example\n\n This capability allows the `main` window access to `filesystem` write related\n commands and `dialog` commands to enable programatic access to files selected by the user.",
+          "description": "Description of what the capability is intended to allow on associated windows.\n\n It should contain a description of what the grouped permissions should allow.\n\n ## Example\n\n This capability allows the `main` window access to `filesystem` write related\n commands and `dialog` commands to enable programmatic access to files selected by the user.",
           "default": "",
           "type": "string"
         },
@@ -1678,6 +1678,17 @@
             }
           ]
         },
+        "Service-Worker-Allowed": {
+          "description": "The HTTP Service-Worker-Allowed response header is used to broaden the path restriction for a\n service worker's default scope.\n\n By default, the scope for a service worker registration is the directory where the service\n worker script is located. For example, if the script `sw.js` is located in `/js/sw.js`,\n it can only control URLs under `/js/` by default. Servers can use the `Service-Worker-Allowed`\n header to allow a service worker to control URLs outside of its own directory.\n\n See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Service-Worker-Allowed>",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HeaderSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "Timing-Allow-Origin": {
           "description": "The Timing-Allow-Origin response header specifies origins that are allowed to see values\n of attributes retrieved via features of the Resource Timing API, which would otherwise be\n reported as zero due to cross-origin restrictions.\n\n See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Timing-Allow-Origin>",
           "anyOf": [
@@ -1862,7 +1873,7 @@
           }
         },
         "removeUnusedCommands": {
-          "description": "Try to remove unused commands registered from plugins base on the ACL list during `tauri build`,\n the way it works is that tauri-cli will read this and set the environment variables for the build script and macros,\n and they'll try to get all the allowed commands and remove the rest\n\n Note:\n   - This won't be accounting for dynamically added ACLs so make sure to check it when using this\n   - This feature requires tauri-plugin 2.1 and tauri 2.4",
+          "description": "Try to remove unused commands registered from plugins base on the ACL list during `tauri build`,\n the way it works is that tauri-cli will read this and set the environment variables for the build script and macros,\n and they'll try to get all the allowed commands and remove the rest\n\n Note:\n   - This won't be accounting for dynamically added ACLs when you use features from the `dynamic-acl` (currently enabled by default) feature flag, so make sure to check it when using this\n   - This feature requires tauri-plugin 2.1 and tauri 2.4",
           "default": false,
           "type": "boolean"
         }
@@ -2258,7 +2269,7 @@
       "description": "Updater type",
       "anyOf": [
         {
-          "description": "Generates lagacy zipped v1 compatible updaters",
+          "description": "Generates legacy zipped v1 compatible updaters",
           "allOf": [
             {
               "$ref": "#/definitions/V1Compatible"
@@ -2272,10 +2283,10 @@
       ]
     },
     "V1Compatible": {
-      "description": "Generates lagacy zipped v1 compatible updaters",
+      "description": "Generates legacy zipped v1 compatible updaters",
       "oneOf": [
         {
-          "description": "Generates lagacy zipped v1 compatible updaters",
+          "description": "Generates legacy zipped v1 compatible updaters",
           "type": "string",
           "enum": [
             "v1Compatible"
@@ -3402,6 +3413,13 @@
             "null"
           ]
         },
+        "bundleName": {
+          "description": "The name of the builder that built the bundle.\n\n Translates to the bundle's CFBundleName property.\n\n If not set, defaults to the package's product name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "minimumSystemVersion": {
           "description": "A version string indicating the minimum macOS X version that the bundled application supports. Defaults to `10.13`.\n\n Setting it to `null` completely removes the `LSMinimumSystemVersion` field on the bundle's `Info.plist`\n and the `MACOSX_DEPLOYMENT_TARGET` environment variable.\n\n An empty string is considered an invalid value so the default value is used.",
           "default": "10.13",
@@ -3425,7 +3443,7 @@
           ]
         },
         "hardenedRuntime": {
-          "description": "Whether the codesign should enable [hardened runtime] (for executables) or not.\n\n [hardened runtime]: <https://developer.apple.com/documentation/security/hardened_runtime>",
+          "description": "Whether the codesign should enable [hardened runtime](https://developer.apple.com/documentation/security/hardened_runtime) (for executables) or not.",
           "default": true,
           "type": "boolean"
         },

@@ -617,6 +617,13 @@ pub struct MacConfig {
   /// Translates to the bundle's CFBundleVersion property.
   #[serde(alias = "bundle-version")]
   pub bundle_version: Option<String>,
+  /// The name of the builder that built the bundle.
+  ///
+  /// Translates to the bundle's CFBundleName property.
+  ///
+  /// If not set, defaults to the package's product name.
+  #[serde(alias = "bundle-name")]
+  pub bundle_name: Option<String>,
   /// A version string indicating the minimum macOS X version that the bundled application supports. Defaults to `10.13`.
   ///
   /// Setting it to `null` completely removes the `LSMinimumSystemVersion` field on the bundle's `Info.plist`
@@ -636,9 +643,7 @@ pub struct MacConfig {
   /// Identity to use for code signing.
   #[serde(alias = "signing-identity")]
   pub signing_identity: Option<String>,
-  /// Whether the codesign should enable [hardened runtime] (for executables) or not.
-  ///
-  /// [hardened runtime]: <https://developer.apple.com/documentation/security/hardened_runtime>
+  /// Whether the codesign should enable [hardened runtime](https://developer.apple.com/documentation/security/hardened_runtime) (for executables) or not.
   #[serde(alias = "hardened-runtime", default = "default_true")]
   pub hardened_runtime: bool,
   /// Provider short name for notarization.
@@ -657,6 +662,7 @@ impl Default for MacConfig {
       frameworks: None,
       files: HashMap::new(),
       bundle_version: None,
+      bundle_name: None,
       minimum_system_version: macos_minimum_system_version(),
       exception_domain: None,
       signing_identity: None,
@@ -1208,7 +1214,7 @@ impl BundleResources {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields, untagged)]
 pub enum Updater {
-  /// Generates lagacy zipped v1 compatible updaters
+  /// Generates legacy zipped v1 compatible updaters
   String(V1Compatible),
   /// Produce updaters and their signatures or not
   // Can't use untagged on enum field here: https://github.com/GREsau/schemars/issues/222
@@ -1221,12 +1227,12 @@ impl Default for Updater {
   }
 }
 
-/// Generates lagacy zipped v1 compatible updaters
+/// Generates legacy zipped v1 compatible updaters
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum V1Compatible {
-  /// Generates lagacy zipped v1 compatible updaters
+  /// Generates legacy zipped v1 compatible updaters
   V1Compatible,
 }
 
@@ -2210,6 +2216,10 @@ impl HeaderAddition for Builder {
         self = self.header("Permission-Policy", value.to_string());
       };
 
+      if let Some(value) = &headers.service_worker_allowed {
+        self = self.header("Service-Worker-Allowed", value.to_string());
+      }
+
       // Add the header Timing-Allow-Origin, if we find a value for it
       if let Some(value) = &headers.timing_allow_origin {
         self = self.header("Timing-Allow-Origin", value.to_string());
@@ -2347,6 +2357,17 @@ pub struct HeaderConfig {
   /// See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy>
   #[serde(rename = "Permissions-Policy")]
   pub permissions_policy: Option<HeaderSource>,
+  /// The HTTP Service-Worker-Allowed response header is used to broaden the path restriction for a
+  /// service worker's default scope.
+  ///
+  /// By default, the scope for a service worker registration is the directory where the service
+  /// worker script is located. For example, if the script `sw.js` is located in `/js/sw.js`,
+  /// it can only control URLs under `/js/` by default. Servers can use the `Service-Worker-Allowed`
+  /// header to allow a service worker to control URLs outside of its own directory.
+  ///
+  /// See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Service-Worker-Allowed>
+  #[serde(rename = "Service-Worker-Allowed")]
+  pub service_worker_allowed: Option<HeaderSource>,
   /// The Timing-Allow-Origin response header specifies origins that are allowed to see values
   /// of attributes retrieved via features of the Resource Timing API, which would otherwise be
   /// reported as zero due to cross-origin restrictions.
@@ -2383,6 +2404,7 @@ impl HeaderConfig {
       cross_origin_opener_policy: None,
       cross_origin_resource_policy: None,
       permissions_policy: None,
+      service_worker_allowed: None,
       timing_allow_origin: None,
       x_content_type_options: None,
       tauri_custom_header: None,
@@ -2784,7 +2806,7 @@ pub struct BuildConfig {
   /// and they'll try to get all the allowed commands and remove the rest
   ///
   /// Note:
-  ///   - This won't be accounting for dynamically added ACLs so make sure to check it when using this
+  ///   - This won't be accounting for dynamically added ACLs when you use features from the `dynamic-acl` (currently enabled by default) feature flag, so make sure to check it when using this
   ///   - This feature requires tauri-plugin 2.1 and tauri 2.4
   #[serde(alias = "remove-unused-commands", default)]
   pub remove_unused_commands: bool,
@@ -2930,7 +2952,19 @@ pub struct Config {
   #[serde(alias = "product-name")]
   #[cfg_attr(feature = "schema", validate(regex(pattern = "^[^/\\:*?\"<>|]+$")))]
   pub product_name: Option<String>,
-  /// App main binary filename. Defaults to the name of your cargo crate.
+  /// Overrides app's main binary filename.
+  ///
+  /// By default, Tauri uses the output binary from `cargo`, by setting this, we will rename that binary in `tauri-cli`'s
+  /// `tauri build` command, and target `tauri bundle` to it
+  ///
+  /// If possible, change the [`package name`] or set the [`name field`] instead,
+  /// and if that's not enough and you're using nightly, consider using the [`different-binary-name`] feature instead
+  ///
+  /// Note: this config should not include the binary extension (e.g. `.exe`), we'll add that for you
+  ///
+  /// [`package name`]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-name-field
+  /// [`name field`]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-name-field
+  /// [`different-binary-name`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#different-binary-name
   #[serde(alias = "main-binary-name")]
   pub main_binary_name: Option<String>,
   /// App version. It is a semver version number or a path to a `package.json` file containing the `version` field.
@@ -3521,6 +3555,7 @@ mod build {
       let cross_origin_opener_policy = opt_lit(self.cross_origin_opener_policy.as_ref());
       let cross_origin_resource_policy = opt_lit(self.cross_origin_resource_policy.as_ref());
       let permissions_policy = opt_lit(self.permissions_policy.as_ref());
+      let service_worker_allowed = opt_lit(self.service_worker_allowed.as_ref());
       let timing_allow_origin = opt_lit(self.timing_allow_origin.as_ref());
       let x_content_type_options = opt_lit(self.x_content_type_options.as_ref());
       let tauri_custom_header = opt_lit(self.tauri_custom_header.as_ref());
@@ -3537,6 +3572,7 @@ mod build {
         cross_origin_opener_policy,
         cross_origin_resource_policy,
         permissions_policy,
+        service_worker_allowed,
         timing_allow_origin,
         x_content_type_options,
         tauri_custom_header

@@ -14,9 +14,8 @@ use url::Url;
 
 use tauri_macros::default_runtime;
 use tauri_utils::{
-  assets::{AssetKey, CspHash},
+  assets::{AssetKey, CspHash, SCRIPT_NONCE_TOKEN, STYLE_NONCE_TOKEN},
   config::{Csp, CspDirectiveSources},
-  html::{SCRIPT_NONCE_TOKEN, STYLE_NONCE_TOKEN},
 };
 
 use crate::resources::ResourceTable;
@@ -277,7 +276,7 @@ impl<R: Runtime> AppManager<R> {
   ) -> Self {
     // generate a random isolation key at runtime
     #[cfg(feature = "isolation")]
-    if let Pattern::Isolation { ref mut key, .. } = &mut context.pattern {
+    if let Pattern::Isolation { key, .. } = &mut context.pattern {
       *key = uuid::Uuid::new_v4().to_string();
     }
 
